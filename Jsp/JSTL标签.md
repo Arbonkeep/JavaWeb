@@ -8,7 +8,7 @@
     3. 使用步骤：
         <1> 导入jstl的相关jar包
         
-        <2> 引入标签库：taglib指令 ： <%@ taglib %>
+        <2> 在jsp中引入标签库：taglib指令 ： <%@ taglib %>
             <%@taglib  prefix="c"  uri="http://java.sun.com/jsp/jstl/core" %>
         
         <3> 使用标签
