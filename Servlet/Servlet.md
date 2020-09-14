@@ -7,18 +7,7 @@
 
     2. 配置servlet
         * 在web目录下的web.xml中配置
-            * 配置servlet
-                <servlet>
-                <servlet-name>demo1</servlet-name>      为类的路径定义一个名字
-                <servlet-class>com.xuexi.web.servlet.Demo1_Servlet</servlet-class>
-                </servlet>
-            
-            * 配置servlet-mapping
-                <servlet-mapping>
-                <servlet-name>demo1</servlet-name>
-                <url-pattern>/demo1</url-pattern>
-                </servlet-mapping>
-
+        * 使用注解配置
     3. 启动Tomcat服务器
 
 ## Servlet执行原理
@@ -50,9 +39,29 @@
     1. 注解配置（要求Servlet3.0）
         @WebServelt(urlPatterns={"虚拟目录","路径"},loadOnStartup = -1)
 
-    2. 一个servlet可以定义多个访问路径：
-         @WebServlet({"/a","/b","/c"}) 
-         @WebServlet("/*")                  * 代表任意，意味着任意路径都可以访问
+        * 一个servlet可以定义多个访问路径：
+            @WebServlet({"/a","/b","/c"}) 
+            @WebServlet("/*")                  * 代表任意，意味着任意路径都可以访问
+
+    2. web.xml配置  
+
+``` xml
+        <servlet>
+            <!-- 设置servlet的友好名称(为类的路径定义一个名字)，要和servlet-mapping中的servlet-name保持一致 -->
+            <servlet-name>FirstServlet</servlet-name>
+            <!-- 设置servlet的全类名 -->
+            <servlet-class>com.arbonkeep.servlet.FirstServlet</servlet-class>
+            <load-on-startup>1</load-on-startup>
+        </servlet>
+        <servlet-mapping>
+            <!-- 设置servlet的友好名称，要和servlet中的servlet-name保持一致 -->
+            <servlet-name>FirstServlet</servlet-name>
+            <!-- 设置servlet的访问路径。可以设置多个，但是建议一个 -->
+            <url-pattern>/FirstServlet</url-pattern>
+        </servlet-mapping>
+
+```
+
 
 ## Servlet体系结构
     1. HttpServlet继承了GenericServlet，GenericServlet继承了Servlet。
@@ -63,5 +72,17 @@
     3. HttpServlet：对http协议的一种封装简化操作。一般使用这种
         <1> 定义类实现HttpServlet
         <2> 重写方法doGet/doPost方法
+
+## Servlet中转发与重定向的区别
+
+    1. 转发地址栏地址不变，重定向地址栏地址会发生变化
+
+    2. 转发是服务器内部的跳转，而重定向是浏览器端的跳转
+
+    3. 转发可以访问WEB-INF下的资源，但是重定向不可以
+
+    4. 转发可以获取请求域中的数据，但是重定向不可以
+
+    5. 重定向可以跨域访问，但是转发不可以
 
 

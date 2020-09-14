@@ -23,7 +23,7 @@
             <2> 发送Coookie对象
                 response.addCookie(Cookie cookie);
 
-            <3> 获取Cookie，拿到数据
+            <3> 获取Cookie，拿到数据。获取到cookie后进行非空判断，完成遍历即可获得所有cookie信息
                 Cookie[] resquest.getCookies();
 
     3. 为什么需要使用Cookie
@@ -38,7 +38,8 @@
             <1> 默认情况下，（cookie存储在浏览器中）但浏览器被关闭后，Cookie数据被销毁
             <2> 持久化存储：
                 setMaxAge(int seconds)
-                    正数：将cookie数据写到硬盘文件中，持久化存储，并且指定cookie的存活时间
+                    正数：将cookie数据写到硬盘文件中，持久化存储，并且指定cookie的存活时间。
+                          
                     负数：默认值
                     零：删除cookie信息
 
@@ -51,13 +52,14 @@
                 默认情况下不能共享
 
                 setPath(String path):设置cookie的取值范围。默认情况下设置的是当前的虚拟目录
-                    如果同台服务器下的所有项目需要共享，则将path设置为"/"即可
+                    如果同台服务器下的所有项目需要共享，则将path设置为"/"即可。由于cookie是浏览器的会话技术，
+                    path是由浏览器解析的所以在设置绝对路径时，需要加上上下文路径
 
             <2> 不同的tomcat服务器间cookie共享问题
                 setDomain(String path):如果设置一级域名相同，那么多个服务器之间cookie可以共享
                 如：setDomain(".baidu.com"),那么tieba.baidu.com和news.baidu.com中cookie可以共享
 
-        5.cookie的特点和作用：
+        5.cookie的特点和作用以及缺陷：
             * 特点
                 <1> cookie缓存数据在客户端（安全性较低）
                 <2> 浏览器对于单个cookie的大小有限制（4kb）以及对同一个域名下的总cookie数量也有限制（20个）
@@ -65,6 +67,11 @@
             * 作用：
                 <1> cookie一般用于存储少量的不太重要的数据
                 <2> 在不登录的情况下，完成服务器对客户端的身份识别
+
+            * 缺点：
+                <1> 存储在浏览器端，安全性不高
+                <2> cookie存储数据存储的键值对都是String类型，如果存储对象，可能需要存储多个cookie
+                <3> 如果在发送请求时携带多个cookie，会造成网络负担
     
 
 ### Cookie实现原理：
@@ -104,7 +111,7 @@
                     因为IDEA（活化不成功0）会自动把原来的work文件夹删除然后再开启服务器是再新建一个work文件夹，
                     保存在里面的数据丢失
 
-        <2> Session什么时候被销毁
+        <3> Session什么时候被销毁
             1) 服务器被关闭
             2) Session的对象调用invalidate()方法
             3) Session对象的默认失效时间：30分钟
@@ -125,6 +132,9 @@
 
 ### Session原理：
     1. Session的实现是依赖于Cookie，服务器通过cookie来确定在一次会话范围内，多次获取的session是同一个对象
+       当浏览器第一次请求服务器时，服务器中没有session，会创建一个session，生成一个sessionId，然后通过响应
+       报文中的响应头set-cookie(JSESSIONID)发送给浏览器，浏览器会记录给sessionId，之后浏览器每次请求都会在
+       请求头中的cookie中带上该sessionId。这样确保了多次请求都是同一个session。
 
 <img src ="./img/img02.png" width = 800px>    
 

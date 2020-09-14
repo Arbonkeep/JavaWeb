@@ -16,8 +16,7 @@
                 * 属性：
                     * content-type:等同于response.setContentType()
                         1.设置响应体的mime类型以及字符集
-                        2.设置当前jsp页面的编码（只有高级的IDE开发工具才能生效，如果使用低级工具,则需要设置pageEncoding属性
-                          设置当前页面的字符集）
+                        2.设置当前jsp页面的编码（只有高级的IDE开发工具才能生效，如果使用低级工具,则需要设置pageEncoding属性设置当前页面的字符集）
 
                     * import：导包
 
@@ -46,18 +45,18 @@
             当客户端请求了JSP页面时：
                 <1> 服务器解析请求消息，找是否有jsp资源
                 <2> 如果找到了，会将jsp文件转换为servlet的java文件
-                    * 该java文件继承了HttpJspBase，而HttpJspBase类又继承了HttpServlet，此时会掉用该类中的jspInit()以及jspService()提供服务
-                <3> 编译编译java文件，生成class字节码文件
+                    * 该java文件继承了HttpJspBase，而HttpJspBase类又继承了HttpServlet，在HttpJspBase中的Service方法重写了HttpServlet的service方法，在HttpJspBase中会调用生成的java文件中的_jspInit()进行初始化以及_jspService()提供服务
+                <3> 编译java文件，生成class字节码文件
                 <4> 由字节码文件提供访问
                     
 <img src ="./img/img01.png" width = 800px>
 
 ## JSP的脚本：JSP定义Java代码的方式
-    1. <%  代码 %>：定义的Java代码，在service方法中，service方法中可以定义什么，该脚本就能定义什么。
+    1. <%  代码 %> jsp脚本片段：定义的Java代码，在service方法中，service方法中可以定义什么，该脚本就能定义什么。
 
-    2. <%! 代码 %>：定义的Java代码，在jsp转换后的Java类的成员位置。
+    2. <%! 代码 %> jsp声明：定义的Java代码，在jsp转换后的Java类的成员位置。
 
-    3. <%= 代码 %>:定义的java代码，会输出到页面上。输出语句中定义什么，该脚本就能定义什么。
+    3. <%= 代码 %> jsp表达式:定义的java代码，会输出到页面上。输出语句中定义什么，该脚本就能定义什么。
 
 ## Jsp的内置对象
     1. 内置对象：在jsp页面中不需要获取和创建，可以直接使用的对象即为jsp的内置对象。jsp中一共有9个内置对象
