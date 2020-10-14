@@ -162,7 +162,246 @@
     127.0.0.1:6379> bitcount sign 0 -1      查看一周的打卡次数有几天
     (integer) 4
     
+```
 
+## Redis的事务
+
+    1. Redis事务的本质：一组命令的集合，一个事务中的所有命令都会被序列化，在事务执行过程中，按照顺序执行。
+                       Redis中事务执行是队列结构
+
+    2. Redis的事务中，没有隔离级别的概念。所有的命令在事务中没有被直接执行，只有在发起执行命令exec时，才会
+       被执行。redis中单条命令时保持原子性的，但是事务不保持原子性。
+
+    3. 事务的实现
+
+        开启事务：multi
+        命令队列：一系列命令
+        执行事务：exec
+        取消事务：discard
+
+    4. 事务的操作
+
+        <1> 事务的正常执行
+
+```
+            127.0.0.1:6379> multi           #开启事务
+            OK
+            127.0.0.1:6379> set k1 v1
+            QUEUED
+            127.0.0.1:6379> set k2 v2 
+            QUEUED
+            127.0.0.1:6379> set k3 v3
+            QUEUED
+            127.0.0.1:6379> exec            #执行事务
+            1) OK
+            2) OK
+            3) OK
+            127.0.0.1:6379> get k1
+            "v1"
+            127.0.0.1:6379> get k2
+            "v2"
+            127.0.0.1:6379> get k3
+            "v3"
+
+```
+        <2> 事务的取消
+
+```
+            127.0.0.1:6379> multi
+            OK
+            127.0.0.1:6379> set k1 v1
+            QUEUED
+            127.0.0.1:6379> set k2 v2
+            QUEUED
+            127.0.0.1:6379> set k3 v3
+            QUEUED
+            127.0.0.1:6379> discard             # 取消事务
+            OK
+            127.0.0.1:6379> get k1              #取消事务后没有值
+            (nil)
+
+```
+
+        <3> Redis中的编译期异常（就是一个命令出错，会导致所有命令都不执行）
+
+```   
+            127.0.0.1:6379> multi
+            OK
+            127.0.0.1:6379> set k1 v1
+            QUEUED
+            127.0.0.1:6379> set k2 v2
+            QUEUED
+            127.0.0.1:6379> setaa k3 v3         #错误命令，语法错误
+            (error) ERR unknown command `setaa`, with args beginning with: `k3`, `v3`, 
+            127.0.0.1:6379> set k4 v4
+            QUEUED
+            127.0.0.1:6379> exec                # 执行事务失败
+            (error) EXECABORT Transaction discarded because of previous errors.
+            127.0.0.1:6379> get k1
+            (nil)
+
+```
+
+        <4> Redis中运行期异常（如果事务队列中语法都正确，某个命令出现了异常(如：1/0) 在执行命令时，其他的
+            命令时可以正常执行的)
+
+```
+
+            127.0.0.1:6379> set k1 "aaa"        #设置k1为字符串aaa
+            OK
+            127.0.0.1:6379> multi
+            OK
+            127.0.0.1:6379> incr k1             # 显然字符串不能自增，但是此时语法没有任何问题
+            QUEUED
+            127.0.0.1:6379> set k2 v2
+            QUEUED
+            127.0.0.1:6379> set k3 v3
+            QUEUED
+            127.0.0.1:6379> exec
+            1) (error) ERR value is not an integer or out of range      #自增命令出异常，其余命令正常执行
+            2) OK
+            3) OK
+            127.0.0.1:6379> get k2
+            "v2"
+
+```
+
+## Redis的乐观锁的实现
+
+    1. 概念
+        <1> 乐观锁：是很乐观的，认为什么地方都是安全的，不会上锁，在更新数据时，去判断一下该数据是否被更改过。
+
+        <2> 悲观锁：是很悲观的。认为什么地方都是不安全的，都会上过
+
+        <3> redis中通过watch命令来完成监视，通过unwatch命令来撤销监视
+
+    2. Redis实现乐观锁的测试
+
+        <1> 正常执行
+
+    ```
+            127.0.0.1:6379> set zhangsan 100
+            OK
+            127.0.0.1:6379> set lisi 100
+            OK
+            127.0.0.1:6379> watch zhangsan             #监视money是否被修改
+            OK
+            127.0.0.1:6379> multi                   #开启事务
+            OK
+            127.0.0.1:6379> incrby zhangsan 20
+            QUEUED
+            127.0.0.1:6379> decrby lisi 20
+            QUEUED
+            127.0.0.1:6379> exec                    #期间数据没有变动，事务正常结束，也就是说money不会被修改
+            1) (integer) 120
+            2) (integer) 80
+
+    ```
+
+        <2> 多线程修改值，使用watch命令实现redis的乐观锁
+
+            1) 使用多线程修改值，导致事务执行失败
+
+``` 
+        127.0.0.1:6379> set zhangsan 100
+        OK
+        127.0.0.1:6379> set lisi 100
+        OK
+        127.0.0.1:6379> watch zhangsan
+        OK
+        127.0.0.1:6379> multi
+        OK
+        127.0.0.1:6379> incrby zhangsan 10
+        QUEUED
+        127.0.0.1:6379> decrby lisi 10
+        QUEUED
+        127.0.0.1:6379> exec                #在执行事务之前，多开一个客户端修改zhangsan的值（即另外一个线程修改了
+        (nil)                                zhangsan的值，会导致事务执行失败）
+        
+        另外一个线程修改值：
+        [root@root local]# redis-cli
+        127.0.0.1:6379> set zhangsan 20
+        OK
+        127.0.0.1:6379> keys * 
+        1) "lisi"
+        2) "zhangsan"
+
+```
+            2) 事务执行失败，即修改失败，我们获取最新的值
+
+```
+        127.0.0.1:6379> unwatch                 #事务执行失败，进行解锁
+        OK
+        127.0.0.1:6379> watch zhangsan          #获取新值，重新监视
+        OK
+        127.0.0.1:6379> multi
+        OK
+        127.0.0.1:6379> incrby zhangsan 10
+        QUEUED
+        127.0.0.1:6379> decrby lisi 10
+        QUEUED
+        127.0.0.1:6379> exec                    #比对监视的值是否发生改变，如果没有改变则执行成功，如果改变则执行失败
+        1) (integer) 30
+        2) (integer) 90
+        127.0.0.1:6379> 
 
 
 ```
+
+## redis的java客户端Jedis
+    1. 使用Jedis连接redis
+        <1> 需要导入jedis的jar包
+
+        <2> 需要设置redis的配置文件，redis.conf
+            1) 将bind 127.0.0.1 注释掉
+
+            2) 将protect-mode的值置为no
+
+        <3> 关闭防火墙
+            CentOS7中使用systemctl stop firewalld.service 关闭，之前的版本使用service iptables stop关闭
+
+## 常用配置文件详解
+
+```
+    units                           配置文件中units单位对大小写不敏感
+
+    bind 127.0.0.1                  绑定的ip，只能接收本机访问
+    protected-mode yes              保护模式，如果为yes，那么在没有设定bind ip且没有设密码时，Redis只接受本机的响应
+
+    port 6379                       端口设置
+
+    daemonize yes                   以守护进程的方式运行，默认是 no，我们需要自己开启为yes
+    pidfile /var/run/redis_6379.pid 如果以后台的方式运行，需要指定一个 pid 文件
+    logfile ""                      日志的文件位置名
+    databases 16                    数据库的数量，默认是 16 个数据库
+    always-show-logo yes            是否总是显示LOGO
+
+    save 900 1                      如果900s内，如果至少有一个1 key进行了修改，就进行持久化操作
+    save 300 10                     如果300s内，如果至少10 key进行了修改，就进行持久化操作
+    save 60 10000                   如果60s内，如果至少10000 key进行了修改，就进行持久化操作
+
+    stop-writes-on-bgsave-error yes 持久化如果出错，是否还需要继续工作
+    rdbcompression yes              是否压缩 rdb 文件，需要消耗一些cpu资源
+    rdbchecksum yes                 保存rdb文件的时候，进行错误的检查校验
+    dir ./                          rdb 文件保存的目录
+
+    requirepass foobared            设置密码，默认被注释
+
+    maxclients 10000                设置能连接上redis的最大客户端的数量
+    maxmemory <bytes>               redis 配置最大的内存容量
+
+    maxmemory-policy noeviction     内存到达上限之后的处理策略
+        策略：
+        1、volatile-lru：只对设置了过期时间的key进行LRU（默认值）
+        2、allkeys-lru ： 删除lru(最近最少使用)算法的key
+        3、volatile-random：随机删除即将过期key
+        4、allkeys-random：随机删除
+        5、volatile-ttl ： 删除即将过期的
+        6、noeviction ： 永不过期，返回错误
+
+    appendonly no                   默认是不开启aof模式的，默认是使用rdb方式持久化的，大多数情况使用rdb即可
+    appendfilename "appendonly.aof" aof持久化的文件的名字
+    appendfsync always              每次修改都会 sync。消耗性能
+    appendfsync everysec            每秒执行一次 sync，可能会丢失这1s的数据
+    appendfsync no                  不执行 sync，这个时候操作系统自己同步数据，速度最快
+

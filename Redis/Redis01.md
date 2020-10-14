@@ -232,7 +232,14 @@
     zrange myset 0 -1                   获取有序集合myset中的所有元素
     zrem myset xiaoming                 删除有序集合中某个指定的元素   
     zcard myset                         获取有序集合中元素个数 
-    zcount myset 1 2                    获取有序集合中指定区间的元素个数                     
+    zcount myset 1 2                    获取有序集合中指定区间的元素个数   
+
+    zrangebyscore key min max [withscores] [limit offset count]
+        返回有序集key中，所有score值介于min和max之间(包括等于min或max)的成员。有序集成员按score值递增(从小到大)
+        次序排列。 
+
+    zrevrangebyscore key max min [withscores] [limit offset count]
+         同上，改为从大到小排列。 
 
 ```
     2. 有序集合的实现
