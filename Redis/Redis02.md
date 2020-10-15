@@ -274,6 +274,8 @@
         <2> 悲观锁：是很悲观的。认为什么地方都是不安全的，都会上过
 
         <3> redis中通过watch命令来完成监视，通过unwatch命令来撤销监视
+            * unwatch
+                如果在执行 WATCH 命令之后， EXEC 命令或 DISCARD 命令先被执行了的话，那么就不需要再执行 UNWATCH 了。
 
     2. Redis实现乐观锁的测试
 
@@ -383,7 +385,7 @@
     stop-writes-on-bgsave-error yes 持久化如果出错，是否还需要继续工作
     rdbcompression yes              是否压缩 rdb 文件，需要消耗一些cpu资源
     rdbchecksum yes                 保存rdb文件的时候，进行错误的检查校验
-    dir ./                          rdb 文件保存的目录
+    dir ./                          rdb 文件保存的目录，默认是当前目录，即启动服务的目录
 
     requirepass foobared            设置密码，默认被注释
 
@@ -399,9 +401,18 @@
         5、volatile-ttl ： 删除即将过期的
         6、noeviction ： 永不过期，返回错误
 
+    dbfilename dump.rdb             指定rdb文件的文件名
+
     appendonly no                   默认是不开启aof模式的，默认是使用rdb方式持久化的，大多数情况使用rdb即可
     appendfilename "appendonly.aof" aof持久化的文件的名字
-    appendfsync always              每次修改都会 sync。消耗性能
-    appendfsync everysec            每秒执行一次 sync，可能会丢失这1s的数据
-    appendfsync no                  不执行 sync，这个时候操作系统自己同步数据，速度最快
+    appendfsync always              每次修改都会sync，记入日志。消耗性能
+    appendfsync everysec            每秒执行一次sync，记入日志。可能会丢失这1s的数据
+    appendfsync no                  不执行sync，记入日志。这个时候操作系统自己同步数据，速度最快
 
+    no-appendfsync-on-rewrite no    aof默认就是文件的无限追加，文件会越来越大
+
+    auto-aof-rewrite-percentage 100 
+    auto-aof-rewrite-min-size 64mb  如果aof文件大于64m，fork一个新的进程来将文件进行重写
+
+
+```
